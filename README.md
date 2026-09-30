@@ -71,6 +71,7 @@ Amount structs can be compared via [google/go-cmp](https://github.com/google/go-
 ### Usable with a PostgreSQL composite type.
 
 Thanks to the driver.Valuer and sql.Scanner interfaces, applications using the [pgx](https://github.com/jackc/pgx) driver can store amounts in a composite type.
+Scanning accepts the textual composite representation as either `string` or `[]byte`, including the byte values returned by [pq](https://github.com/lib/pq).
 
 Example schema:
 ```
@@ -100,11 +101,13 @@ type Product struct {
 }
 ```
 
-Example scan:
+Example scan with pgx:
 ```go
 p := Product{}
 row := tx.QueryRow(ctx, `SELECT id, name, price, created_at, updated_at FROM products WHERE id = $1`, id)
 err := row.Scan(&p.ID, &p.Name, &p.Price, &p.CreatedAt, &p.UpdatedAt)
 ```
+
+For a `database/sql` transaction, use `tx.QueryRowContext(ctx, ...)` followed by the same `row.Scan(...)` call.
 
 See our [database integration notes](https://github.com/bojanz/currency/wiki/Database-integration-notes) for other examples (MySQL/MariaDB, SQLite).
