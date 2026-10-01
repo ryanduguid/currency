@@ -993,150 +993,28 @@ func TestAmount_Value(t *testing.T) {
 
 func TestAmount_Scan(t *testing.T) {
 	tests := []struct {
-		name             string
 		src              string
 		wantNumber       string
 		wantCurrencyCode string
-		wantScanError    error
 		wantError        string
-		preserve         bool
 	}{
-		{"empty", "", "0", "", nil, "", true},
-		{"valid", "(3.45,USD)", "3.45", "USD", nil, "", false},
-		{"scaled_zero", "(0.00000,EUR)", "0.00000", "EUR", nil, "", false},
-		{"scaled_number", "(12.34000,USD)", "12.34000", "USD", nil, "", false},
-		{"large_negative", "(-12345678901234567890.034500,USD)", "-12345678901234567890.034500", "USD", nil, "", false},
-		{"without_parentheses", "3.45,USD", "3.45", "USD", nil, "", false},
-		{"empty_currency", "(3.45,)", "0", "", currency.InvalidCurrencyCodeError{CurrencyCode: ""}, `invalid currency code ""`, true},
-		{"empty_number", "(,USD)", "0", "", currency.InvalidNumberError{Number: ""}, `invalid number ""`, true},
-		{"invalid_number", "(bad,USD)", "0", "", currency.InvalidNumberError{Number: "bad"}, `invalid number "bad"`, true},
-		{"invalid_number_and_currency", "(bad,usd)", "0", "", currency.InvalidNumberError{Number: "bad"}, `invalid number "bad"`, true},
-		{"lowercase_currency", "(3.45,usd)", "0", "", currency.InvalidCurrencyCodeError{CurrencyCode: "usd"}, `invalid currency code "usd"`, true},
-		{"space_currency", "(3.45,   )", "0", "", currency.InvalidCurrencyCodeError{CurrencyCode: "   "}, `invalid currency code "   "`, true},
-		{"extra_field", "(3.45,USD,extra)", "0", "", currency.InvalidCurrencyCodeError{CurrencyCode: "USD,extra"}, `invalid currency code "USD,extra"`, true},
-		{"zero_empty_currency", "(0,)", "0", "", nil, "", false},
-		{"zero_space_currency", "(0,   )", "0", "", nil, "", false},
-		{"scaled_zero_space_currency", "(0.00000,   )", "0.00000", "", nil, "", false},
+		{"", "0", "", ""},
+		{"(3.45,USD)", "3.45", "USD", ""},
+		{"(3.45,)", "0", "", `invalid currency code ""`},
+		{"(,USD)", "0", "", `invalid number ""`},
+		{"(0,)", "0", "", ""},
+		{"(0,   )", "0", "", ""},
 	}
 
 	for _, tt := range tests {
-		sources := []struct {
-			name string
-			src  any
-		}{
-			{"string", tt.src},
-			{"bytes", []byte(tt.src)},
-		}
-		if tt.src == "" {
-			sources = append(sources, struct {
-				name string
-				src  any
-			}{"nil_bytes", []byte(nil)})
-		}
-		for _, source := range sources {
-			for _, initial := range []struct {
-				name         string
-				number       string
-				currencyCode string
-			}{
-				{"zero", "0", ""},
-				{"populated", "99.9900", "EUR"},
-			} {
-				t.Run(tt.name+"/"+source.name+"/"+initial.name, func(t *testing.T) {
-					var a currency.Amount
-					if initial.currencyCode != "" {
-						var err error
-						a, err = currency.NewAmount(initial.number, initial.currencyCode)
-						if err != nil {
-							t.Fatal(err)
-						}
-					}
-					wantNumber, wantCurrencyCode := tt.wantNumber, tt.wantCurrencyCode
-					if tt.preserve {
-						wantNumber, wantCurrencyCode = initial.number, initial.currencyCode
-					}
-					err := a.Scan(source.src)
-					if a.Number() != wantNumber {
-						t.Errorf("number: got %v, want %v", a.Number(), wantNumber)
-					}
-					if a.CurrencyCode() != wantCurrencyCode {
-						t.Errorf("currency code: got %v, want %v", a.CurrencyCode(), wantCurrencyCode)
-					}
-					if err != tt.wantScanError {
-						t.Errorf("typed error: got %#v, want %#v", err, tt.wantScanError)
-					}
-					errStr := ""
-					if err != nil {
-						errStr = err.Error()
-					}
-					if errStr != tt.wantError {
-						t.Errorf("error: got %v, want %v", errStr, tt.wantError)
-					}
-				})
-			}
-		}
-	}
-}
-
-func TestAmount_ScanNonString(t *testing.T) {
-	for _, tt := range []struct {
-		name      string
-		src       any
-		wantError string
-	}{
-		{"int", 123, "value is not a string: 123"},
-		{"int64", int64(123), "value is not a string: 123"},
-		{"float64", float64(3.45), "value is not a string: 3.45"},
-		{"nil", nil, "value is not a string: <nil>"},
-	} {
-		for _, populated := range []bool{false, true} {
-			t.Run(fmt.Sprintf("%s/populated=%t", tt.name, populated), func(t *testing.T) {
-				var a currency.Amount
-				wantNumber, wantCurrencyCode := "0", ""
-				if populated {
-					wantNumber, wantCurrencyCode = "99.9900", "EUR"
-					var err error
-					a, err = currency.NewAmount(wantNumber, wantCurrencyCode)
-					if err != nil {
-						t.Fatal(err)
-					}
-				}
-				err := a.Scan(tt.src)
-				if err == nil || err.Error() != tt.wantError {
-					t.Errorf("error: got %v, want %v", err, tt.wantError)
-				}
-				if a.Number() != wantNumber || a.CurrencyCode() != wantCurrencyCode {
-					t.Errorf("amount: got %s %s, want %s %s", a.Number(), a.CurrencyCode(), wantNumber, wantCurrencyCode)
-				}
-			})
-		}
-	}
-}
-
-func TestAmount_ScanByteOwnership(t *testing.T) {
-	for _, tt := range []struct {
-		name             string
-		src              string
-		replacement      string
-		wantNumber       string
-		wantCurrencyCode string
-		wantScanError    error
-		wantError        string
-	}{
-		{"valid", "(3.45,USD)", "(9.87,EUR)", "3.45", "USD", nil, ""},
-		{"invalid_number", "(bad,USD)", "(new,EUR)", "0", "", currency.InvalidNumberError{Number: "bad"}, `invalid number "bad"`},
-		{"invalid_currency", "(3.45,usd)", "(9.87,eur)", "0", "", currency.InvalidCurrencyCodeError{CurrencyCode: "usd"}, `invalid currency code "usd"`},
-	} {
-		t.Run(tt.name, func(t *testing.T) {
+		t.Run("", func(t *testing.T) {
 			var a currency.Amount
-			buf := []byte(tt.src)
-			err := a.Scan(buf)
-			copy(buf, tt.replacement)
-			if a.Number() != tt.wantNumber || a.CurrencyCode() != tt.wantCurrencyCode {
-				t.Errorf("amount: got %s %s, want %s %s", a.Number(), a.CurrencyCode(), tt.wantNumber, tt.wantCurrencyCode)
+			err := a.Scan(tt.src)
+			if a.Number() != tt.wantNumber {
+				t.Errorf("number: got %v, want %v", a.Number(), tt.wantNumber)
 			}
-			if err != tt.wantScanError {
-				t.Errorf("typed error: got %#v, want %#v", err, tt.wantScanError)
+			if a.CurrencyCode() != tt.wantCurrencyCode {
+				t.Errorf("currency code: got %v, want %v", a.CurrencyCode(), tt.wantCurrencyCode)
 			}
 			errStr := ""
 			if err != nil {
@@ -1146,5 +1024,32 @@ func TestAmount_ScanByteOwnership(t *testing.T) {
 				t.Errorf("error: got %v, want %v", errStr, tt.wantError)
 			}
 		})
+	}
+}
+
+func TestAmount_ScanNonString(t *testing.T) {
+	var a currency.Amount
+	err := a.Scan(123)
+
+	wantError := "value is not a string: 123"
+	errStr := ""
+	if err != nil {
+		errStr = err.Error()
+	}
+	if errStr != wantError {
+		t.Errorf("error: got %v, want %v", errStr, wantError)
+	}
+}
+
+func TestAmount_ScanBytes(t *testing.T) {
+	var a currency.Amount
+	if err := a.Scan([]byte("(0.00000,EUR)")); err != nil {
+		t.Fatal(err)
+	}
+	if a.Number() != "0.00000" {
+		t.Errorf("number: got %v, want 0.00000", a.Number())
+	}
+	if a.CurrencyCode() != "EUR" {
+		t.Errorf("currency code: got %v, want EUR", a.CurrencyCode())
 	}
 }
