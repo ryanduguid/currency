@@ -63,7 +63,7 @@ jobs:
       run: go test -v -race -coverprofile=profile.cov ./...
 
     - name: Send coverage
-      uses: shogo82148/actions-goveralls@v1
+      uses: shogo82148/actions-goveralls@daabb2902148216a0b13c82107a6e67ed97f796e # v1
       with:
         path-to-profile: profile.cov
         flag-name: Go-${{ matrix.go }}
@@ -73,6 +73,6 @@ jobs:
     needs: test
     runs-on: ubuntu-latest
     steps:
-      - uses: shogo82148/actions-goveralls@v1
+      - uses: shogo82148/actions-goveralls@daabb2902148216a0b13c82107a6e67ed97f796e # v1
         with:
           parallel-finished: true
