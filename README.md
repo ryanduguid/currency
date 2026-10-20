@@ -1,4 +1,4 @@
-# currency [![Build](https://github.com/bojanz/currency/actions/workflows/build.yml/badge.svg)](https://github.com/bojanz/currency/actions/workflows/build.yml) [![Coverage Status](https://coveralls.io/repos/github/bojanz/currency/badge.svg?branch=main)](https://coveralls.io/github/bojanz/currency?branch=main) [![PkgGoDev](https://pkg.go.dev/badge/github.com/bojanz/currency)](https://pkg.go.dev/github.com/bojanz/currency)
+# currency [![Build](https://img.shields.io/github/actions/workflow/status/bojanz/currency/build.yml?label=Build&style=flat&labelColor=000000)](https://github.com/bojanz/currency/actions/workflows/build.yml) [![Coverage Status](https://img.shields.io/coverallsCoverage/github/bojanz/currency?branch=main&style=flat&labelColor=000000)](https://coveralls.io/github/bojanz/currency?branch=main) [![PkgGoDev](https://img.shields.io/badge/Go-reference-66023C?logo=go&style=flat&labelColor=000000&logoColor=E5E4E2&color=66023C)](https://pkg.go.dev/github.com/bojanz/currency)
 
 Handles currency amounts, provides currency information and formatting.
 
